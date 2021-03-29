@@ -165,13 +165,13 @@ if (!file.exists(model_file) || !file.exists(model_file_depth) ||
   m_depth <- readRDS(model_file_depth)
   m_nohook <- readRDS(model_file_nohook)
   
-  ind <- readRDS("data-generated/hbll-inside-joint-inside-index.rds")
+  ind <- readRDS("data-generated/hbll-inside-joint-index.rds")
   ind_depth <- readRDS("data-generated/hbll-inside-joint-index-depth.rds")
-  ind_nohook <- readRDS("data-generated/hbll-joint-index-depth.rds")
+  ind_nohook <- readRDS("data-generated/hbll-inside-joint-index-depth.rds")
 }
-m
-m_depth
-m_nohook
+#m
+#m_depth
+#m_nohook
 
 #sink("figs/hbll-model.txt")
 #m
@@ -181,7 +181,7 @@ set.seed(82302)
 d_utm$resids <- residuals(m) # randomized quantile residuals
 
 # Project density ------------------------------
-s_years <- filter(d_utm, survey == "HBLL INS S") %>% pull(year) %>% unique()
+s_years <- dplyr::filter(d_utm, survey == "HBLL INS S") %>% pull(year) %>% unique()
 
 get_predictions <- function(model) {
   predict(model,
@@ -413,9 +413,13 @@ plot_map <- function(dat, column, wrap = TRUE) {
 
 plot_map2 <- function(dat, column, wrap = TRUE) {
   gg <- ggplot(data = dat) +
+    geom_sf(
+      data = coast, inherit.aes = FALSE
+    ) +
+    coord_sf(xlim = c(-128, -123), ylim = c(48, 51)) +
     geom_tile(mapping = aes(longitude, latitude, fill = {{ column }}), width = 0.025, height = 0.025) +
-    coord_fixed() +
-    scale_fill_viridis_c(option = "D")
+    scale_fill_viridis_c(option = "D") +
+    theme_bw()
   if (wrap) gg + facet_wrap(~year) else gg
 }
 
@@ -443,13 +447,13 @@ plot_map(predictions$data, exp(est_non_rf)) +
   labs(fill = "Fixed effect\nestimate")
 ggsave("figs/hbll-joint-non-rf.png", width = 10, height = 10)
 
-plot_map(dplyr::filter(predictions$data, year == 2018), omega_s, wrap = FALSE) +
-  diverging_scale + theme_bw()
+plot_map2(dplyr::filter(predictions$data, year == 2018), omega_s, wrap = FALSE) +
+  scale_fill_viridis_b() + labs(fill = expression("Spatial effects" ~ omega[s]))
 ggsave("inside/figures/hbll-inside-joint-omega.png", width = 5, height = 5, dpi = 600)
 
-plot_map(predictions$data, epsilon_st) +
-  diverging_scale + theme_bw()
-ggsave("inside/figures/hbll-inside-joint-epsilon.png", width = 10, height = 10, dpi = 600)
+g <- plot_map2(predictions$data, epsilon_st) +
+  scale_fill_viridis_c(trans = "log") + labs(fill = expression("Spatiotemporal effects" ~ epsilon[st]))
+ggsave("inside/figures/hbll-inside-joint-epsilon.png", g, width = 10, height = 10, dpi = 600)
 
 palette <- c(RColorBrewer::brewer.pal(5, "Set2"))
 bind_rows(ind_north, ind_south) %>%
