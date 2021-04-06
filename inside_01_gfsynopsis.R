@@ -72,11 +72,9 @@ datpl <- samps %>%
 plot(length ~ jitter(age), datpl)
 lines(length ~ age, vb_a$predictions, col = "red", lwd = 3)
 
-plot(resid ~ jitter(age), datpl)
-abline(h = 0)
-
-plot(resid_log ~ jitter(age), datpl)
-abline(h = 0)
+ggplot(datpl, aes(age, resid_log)) + geom_jitter(shape = 1, alpha = 0.3) + geom_smooth() + 
+  geom_hline(yintercept = 0, linetype = 2) + theme_bw() + labs(x = "Age", y = "Residual (logspace)")
+ggsave("inside/figures/vb_resid.png", width = 4, height = 3)
 
 
 ML <- summarise(group_by(samps, Source, age), ML = mean(length, na.rm = TRUE))

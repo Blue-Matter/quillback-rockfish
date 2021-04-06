@@ -61,3 +61,6 @@ make_OM <- function(nsim = 48, proyears = 100, FYr = 1918, maxage = 60) {
 
 OM <- make_OM()
 saveRDS(OM, file = "inside/OM/ins_OM.rds")
+
+OM <- make_OM(nsim = 2)
+saveRDS(OM, file = "inside/OM/ins_OM_2sim.rds")
