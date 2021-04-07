@@ -1,5 +1,5 @@
 
-# Inside dogfish
+# Inside HBLL quillback
 library(gfplot)
 library(sdmTMB)
 
@@ -38,16 +38,16 @@ library(sdmTMB)
 #  d$block_designation <- as.numeric(d$block_designation)
 #  saveRDS(d, file = f)
 #}
-d <- readRDS("data-generated/hbll-inside-grid.rds") %>% 
-  mutate(latitude = round(latitude, 1), longitude = round(longitude, 1))
+d <- readRDS("data-raw/inside-surveys-blocks.rds")
 
 hook <- readRDS("data-raw/quillback_insideHBLL_hook_adjusted.rds") %>%
   select(
     survey_abbrev, survey_series_id, year, fishing_event_id, total_hooks, prop_bait_hooks,
-    hook_adjust_factor, catch_count, catch_weight, hook_count, latitude, longitude
-  ) %>% rename(survey = survey_abbrev) %>% mutate(latitude = round(latitude, 1), longitude = round(longitude, 1))
+    hook_adjust_factor, catch_count, catch_weight, hook_count, latitude, longitude, depth
+  ) %>% 
+  rename(survey = survey_abbrev) 
 
-d <- left_join(d, hook, by = c("survey", "latitude", "longitude"))
+d <- left_join(hook, d, by = "fishing_event_id")
 
 
 #dogfish_test_remove <- FALSE
@@ -102,6 +102,12 @@ joint_grid_utm <- mutate(joint_grid_utm, X_cent = X - mean(d_utm$X))
 north_grid_utm <- dplyr::filter(joint_grid_utm, survey %in% "HBLL INS N")
 south_grid_utm <- dplyr::filter(joint_grid_utm, survey %in% "HBLL INS S")
 
+get_predictions <- function(model) {
+  predict(model,
+          newdata = joint_grid_utm,
+          return_tmb_object = TRUE, xy_cols = c("X", "Y"), area = joint_grid_utm$area
+  )
+}
 
 # Fit models -----------------------------------------------------
 model_file <- "data-generated/hbll-inside-joint-hook-eps.rds"
@@ -110,7 +116,7 @@ model_file_nohook <- "data-generated/hbll-inside-joint-no-hook-eps.rds"
 if (!file.exists(model_file) || !file.exists(model_file_depth) ||
     !file.exists(model_file_nohook)) {
   
-  sp <- make_mesh(d_utm, c("X", "Y"), n_knots = 100)
+  sp <- make_mesh(d_utm, c("X", "Y"), n_knots = 400)
   
   png("inside/figures/hbll-joint-spde.png", width = 7, height = 7, units = "in", res = 180)
   plot(sp)
@@ -147,7 +153,7 @@ if (!file.exists(model_file) || !file.exists(model_file_depth) ||
   bias_correct <- FALSE
   joint_grid_utm$offset <- joint_grid_utm$offset_area_hook
   predictions <- get_predictions(m)
-  ind <- get_index(predictions, bias_correct = bias_correct)
+  ind <- get_index(predictions, bias_correct = TRUE)
   saveRDS(ind, file = "data-generated/hbll-inside-joint-index.rds")
   
   joint_grid_utm$offset <- joint_grid_utm$offset_area_hook
@@ -158,7 +164,7 @@ if (!file.exists(model_file) || !file.exists(model_file_depth) ||
   joint_grid_utm$offset <- joint_grid_utm$offset_area_swept
   predictions_nohook <- get_predictions(m_nohook)
   ind_nohook <- get_index(predictions_nohook, bias_correct = bias_correct)
-  saveRDS(ind_nohook, file = "data-generated/hbll-inside-joint-index-depth.rds")
+  saveRDS(ind_nohook, file = "data-generated/hbll-inside-joint-index-nohook.rds")
   
 } else {
   m <- readRDS(model_file)
@@ -167,7 +173,7 @@ if (!file.exists(model_file) || !file.exists(model_file_depth) ||
   
   ind <- readRDS("data-generated/hbll-inside-joint-index.rds")
   ind_depth <- readRDS("data-generated/hbll-inside-joint-index-depth.rds")
-  ind_nohook <- readRDS("data-generated/hbll-inside-joint-index-depth.rds")
+  ind_nohook <- readRDS("data-generated/hbll-inside-joint-index-nohook.rds")
 }
 #m
 #m_depth
@@ -182,14 +188,6 @@ d_utm$resids <- residuals(m) # randomized quantile residuals
 
 # Project density ------------------------------
 s_years <- dplyr::filter(d_utm, survey == "HBLL INS S") %>% pull(year) %>% unique()
-
-get_predictions <- function(model) {
-  predict(model,
-          newdata = joint_grid_utm,
-          return_tmb_object = TRUE, xy_cols = c("X", "Y"), area = joint_grid_utm$area
-  )
-}
-
 
 # What about the individual surveys? -----------------------
 north_grid_utm$offset <- north_grid_utm$offset_area_hook
@@ -385,8 +383,7 @@ g <- ggplot(dplyr::filter(joint_grid_utm, year == 2019), aes(longitude, latitude
 ggsave("inside/figures/hbll-inside-area-in-water.png", g, width = 7, height = 5, dpi = 600)
 
 # Diagnostics and plots -----------------------------------
-diverging_scale <- scale_fill_gradient2(high = "red",
-                                        low = "blue", mid = "grey90")
+diverging_scale <- scale_fill_gradient2(high = "red", low = "blue", mid = "grey90")
 
 g <- ggplot(d_utm, aes(longitude, latitude, fill = resids)) +
   geom_sf(
@@ -423,7 +420,7 @@ plot_map2 <- function(dat, column, wrap = TRUE) {
   if (wrap) gg + facet_wrap(~year) else gg
 }
 
-g <- plot_map(predictions$data, exp(est)) +
+g <- plot_map2(predictions$data, exp(est)) +
   scale_fill_viridis_c(trans = "sqrt", option = "D") +
   labs(
     fill = "Estimated\nadjusted\ncount",
@@ -431,21 +428,21 @@ g <- plot_map(predictions$data, exp(est)) +
   ) +
   geom_point(
     data = d_utm, pch = 21, mapping = aes(
-      x = X, y = Y,
+      x = longitude, y = latitude,
       size = catch_count / exp(offset_area_hook)
     ),
     inherit.aes = FALSE, colour = "grey20", alpha = 0.5
   ) +
   scale_size_area(max_size = 7)
-ggsave("figs/hbll-joint-prediction-sqrt.png", g, width = 10, height = 10)
+ggsave("inside/figures/hbll-joint-prediction-sqrt.png", g, width = 10, height = 10)
 
-g <- g + scale_fill_viridis_c(trans = "log10", option = "D")
-ggsave("figs/hbll-joint-prediction-log.png", width = 10, height = 10)
+g <- g + scale_fill_viridis_c(trans = "log", option = "D", breaks = c(0.37, 1, 2.72, 7.39, 20.1))
+ggsave("inside/figures/hbll-joint-prediction-log.png", g, width = 10, height = 10)
 
-plot_map(predictions$data, exp(est_non_rf)) +
-  scale_fill_viridis_c(trans = "sqrt", option = "D") +
+g <- plot_map2(predictions$data, exp(est_non_rf)) +
+  scale_fill_viridis_c(trans = "log", option = "D") +
   labs(fill = "Fixed effect\nestimate")
-ggsave("figs/hbll-joint-non-rf.png", width = 10, height = 10)
+ggsave("inside/figures/hbll-joint-non-rf.png", g, width = 10, height = 10)
 
 plot_map2(dplyr::filter(predictions$data, year == 2018), omega_s, wrap = FALSE) +
   scale_fill_viridis_b() + labs(fill = expression("Spatial effects" ~ omega[s]))
