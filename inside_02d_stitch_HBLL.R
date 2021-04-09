@@ -267,6 +267,15 @@ g <- ggplot(d_utm, aes(longitude, latitude)) +
     fill = "Numbers/swept area"
   )
 
+ggplot(d_utm, aes(depth, catch_count / exp(offset_area_hook), shape = survey)) + 
+  facet_wrap(~ year) + 
+  geom_smooth(method = "lm") +
+  geom_point() + theme_bw() +
+  coord_trans(x = "log") + labs(y = "Numbers/swept area/hook") +
+  scale_shape_manual(name = "Survey", values = c("HBLL INS N" = 16, "HBLL INS S" = 1))
+ggsave("inside/figures/hbll-inside-data-depth.png", width = 4, height = 7, dpi = 600)
+
+
 g <- ggplot(d_utm) + facet_grid(year ~ survey) + 
   geom_histogram(binwidth = 1, boundary = 0,  
                  closed = "left", colour = "black", fill = "grey70",

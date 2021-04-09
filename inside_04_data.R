@@ -118,6 +118,7 @@ make_data_list <- function() {
   dat$Chist <- make_catch()
   dat$CAA <- make_CAA()
   dat <- c(dat, make_CAL(), make_index())
+  dat$I_units <- rep(0, ncol(dat$Index))
   
   return(dat)
 }
