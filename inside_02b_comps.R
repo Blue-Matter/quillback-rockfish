@@ -61,6 +61,7 @@ generate_survey_samples <- function() {
       list(samps = HL, trips = HL_trips)
     }
   }
+  
   age_samps("HBLL INS")
   ggsave("inside/figures/data_s_CAA_HBLL.png", height = 8, width = 4)
   
@@ -76,6 +77,18 @@ generate_survey_samples <- function() {
   age_samps("HBLL INS", FALSE) %>% saveRDS("data-generated/inside_HBLL_age_samps.rds")
   age_samps("Area 12", FALSE) %>% saveRDS("data-generated/inside_Jig12_age_samps.rds")
   age_samps("Area 13", FALSE) %>% saveRDS("data-generated/inside_Jig13_age_samps.rds")
+  age_samps("Area 18", FALSE) %>% saveRDS("data-generated/inside_Jig18_age_samps.rds")
+  age_samps("Area 19", FALSE) %>% saveRDS("data-generated/inside_Jig19_age_samps.rds")
+  
+  len_samps("HBLL", FALSE) %>% saveRDS("data-generated/inside_HBLL_len_samps.rds")
+  len_samps("Area 12", FALSE) %>% saveRDS("data-generated/inside_Jig12_len_samps.rds")
+  len_samps("Area 13", FALSE) %>% saveRDS("data-generated/inside_Jig13_len_samps.rds")
+  
+  len_samps("Area 15", FALSE) %>% saveRDS("data-generated/inside_Jig15_len_samps.rds")
+  len_samps("Area 16", FALSE) %>% saveRDS("data-generated/inside_Jig16_len_samps.rds")
+  
+  len_samps("Area 18", FALSE) %>% saveRDS("data-generated/inside_Jig18_len_samps.rds")
+  len_samps("Area 19", FALSE) %>% saveRDS("data-generated/inside_Jig19_len_samps.rds")
   
   #do_ALK("HBLL")
   #ggsave("inside/figures/data_lengths_HBLL.png", height = 6, width = 6)
@@ -215,6 +228,7 @@ plot_comm_samples <- function() {
   do_ALK("HANDLINE", FALSE) %>% saveRDS("data-generated/inside_handline_CAA.rds")
   do_ALK("TROLL", FALSE) %>% saveRDS("data-generated/inside_troll_CAA.rds")
   len_samps("LONGLINE", FALSE) %>% saveRDS("data-generated/inside_longline_CAL.rds")
+  len_samps("HANDLINE", FALSE) %>% saveRDS("data-generated/inside_handline_CAL.rds")
   
   invisible()
 }
