@@ -3,10 +3,16 @@
 # other
 other_survey <- read.csv("data-raw/quillback_survey_index.csv")
 other_survey %>% 
-  dplyr::filter(survey_series_desc == "Strait of Georgia Dogfish Longline" | survey_abbrev == "HBLL INS N" | survey_abbrev == "HBLL INS S") %>% 
-  ggplot(aes(year, biomass, ymin = lowerci, ymax = upperci)) + geom_point() + geom_line() + 
-  facet_grid(survey_abbrev ~ ., scales = "free_y") + geom_linerange() + theme_bw()
-ggsave("inside/figures/data_index.png", height = 6, width = 4)
+  dplyr::filter(survey_series_desc == "Strait of Georgia Dogfish Longline" | 
+                  grepl("Jig", survey_series_desc) | grepl("HBLL INS", survey_abbrev)) %>%
+  mutate(survey = ifelse(grepl("HBLL INS", survey_abbrev), survey_abbrev, 
+                         ifelse(grepl("Jig", survey_series_desc), 
+                                paste("Jig Area", substr(survey_series_desc, 27, 28)), 
+                                survey_series_desc))) %>%
+  ggplot(aes(year, biomass, ymin = lowerci, ymax = upperci)) + geom_point() + geom_line(linetype = 3) + 
+  facet_wrap(survey ~ ., scales = "free_y") +
+  geom_linerange() + theme_bw()
+ggsave("inside/figures/data_index.png", height = 4, width = 6)
 
 ggplot(other_survey, aes(year, biomass, ymin = lowerci, ymax = upperci)) + geom_point() + geom_line() + 
   facet_wrap(~survey_abbrev, scales = "free_y") + geom_linerange() + theme_bw()
